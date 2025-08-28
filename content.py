@@ -31,7 +31,7 @@ class QuestionWorker(QThread):
                     translated_options = []
                     for _, d in enumerate(shuffled):
                         translated_options.append(GoogleTranslator(source="en", target="it").translate(d))
-                    batch.append({"question": question, "options": translated_options, "answer": correct})
+                    batch.append({"question": question, "options": translated_options, "answer": correct, "answered": False})
         except Exception as e:
             print(f"Worker error {e}")
         # print("batch")
@@ -46,6 +46,7 @@ class QuizApp(py.QWidget):
         self.index = 0
         self.score = 0
         self.questions = []
+        self.prev_answer = []
 
         self.layout = py.QVBoxLayout()
         self.setLayout(self.layout)
@@ -68,9 +69,19 @@ class QuizApp(py.QWidget):
         self.layout.addWidget(self.right_answer)
         
         self.next_btn = py.QPushButton("Next")
-        self.next_btn.setStyleSheet("width: 20px; color: white; background-color: orange")
+        self.next_btn.setStyleSheet("color: black; background-color: orange")
+        self.next_btn.setFixedWidth(60)
+        
+        self.prev_btn = py.QPushButton("Previous")
+        self.prev_btn.setStyleSheet("color: black; background-color: orange")
+        self.prev_btn.setFixedWidth(70)
+        
+        
         self.next_btn.clicked.connect(self.next_question)
         self.layout.addWidget(self.next_btn)
+        
+        self.prev_btn.clicked.connect(self.prev_question)
+        self.layout.addWidget(self.prev_btn)
         
         self.is_fetching = False
         self.call_load_question_again = False
@@ -97,7 +108,7 @@ class QuizApp(py.QWidget):
             self.call_load_question_again = False
             self.load_question()
    
-    def load_question(self):
+    def load_question(self, from_go_back=False):
         # print(self.questions)
         if self.index >= len(self.questions):
             self.label.setText("Loading question")
@@ -122,18 +133,47 @@ class QuizApp(py.QWidget):
             self.option_buttons.append(btn)
         for i, option in enumerate(options):
             self.option_buttons[i].setText(option)
+            
+        if from_go_back:
+            self.index += 1
+    
+    def go_back(self):
+        if self.index == 0:
+            return
+        self.index -= 1
+        self.load_question()
+        
+        if self.prev_answer[self.index]["wrong"]:
+            for btn in self.option_buttons:
+                # print(self.prev_answer[self.index]["wrong"])
+                if btn.text() == self.questions[self.index]["answer"]:
+                    btn.setStyleSheet("background-color: lightgreen; color: black") 
+                if btn.text() == self.prev_answer[self.index]["wrong_answer"]:
+                    btn.setStyleSheet("background-color: #FF7F7F; color: black")
+        else:
+            for btn in self.option_buttons:
+                # print(self.prev_answer[self.index]["wrong"])
+                if btn.text() == self.questions[self.index]["answer"]:
+                    btn.setStyleSheet("background-color: lightgreen; color: black") 
+                btn.setEnabled(False)     
     
     def next_question(self):
         # print("djfj")
         self.result_label.setText("")
         self.load_question()
-    
+        
+    def prev_question(self):
+        self.result_label.setText("")
+        self.go_back()
+
     def check_answer(self):
         sender = self.sender()
         # print(sender)
         if self.index > len(self.questions):
             self.label.setText("Loading question")
             self.call_load_question_again = True
+            return
+        if self.questions[self.index]["answered"]:
             return
         
         if sender.text() == self.questions[self.index]["answer"]:
@@ -148,6 +188,8 @@ class QuizApp(py.QWidget):
                 if btn.text() == self.questions[self.index]["answer"]:
                     btn.setStyleSheet("background-color: lightgreen; color: black")
             # sender.
+            self.prev_answer.append({"wrong": False, "wrong_answer": ""})
+            self.questions[self.index]["answered"] = True
         else:
             self.wrong_count += 1
             self.correct_count_text.setText(f"You have answered {self.correct_count} correctly")
@@ -161,7 +203,8 @@ class QuizApp(py.QWidget):
                     btn.setStyleSheet("background-color: lightgreen; color: black") 
                 if btn.text() == sender.text():
                     btn.setStyleSheet("background-color: #FF7F7F; color: black")
-                    
+            self.prev_answer.append({"wrong": True, "wrong_answer": f"{sender.text()}"})
+            self.questions[self.index]["answered"] = True
         self.index += 1
 
         for btn in self.option_buttons:
@@ -183,3 +226,5 @@ if __name__ == "__main__":
 # but if correct color the option chosen in green
 # also add a previous button to go back
 # change the app icon
+
+#https://github.com/StanleyAnyas/traity.git
