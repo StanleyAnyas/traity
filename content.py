@@ -81,12 +81,18 @@ class QuizApp(py.QWidget):
         self.prev_btn = py.QPushButton("Previous")
         self.prev_btn.setStyleSheet("color: black; background-color: orange")
         self.prev_btn.setFixedWidth(70)
+
+        self.clear_btn = py.QPushButton("Clear")
+        self.clear_btn.setStyleSheet("color: black; background-color: orange")
+        self.clear_btn.setFixedWidth(80)
+        
         
         self.next_btn.clicked.connect(self.next_question)
         # self.layout.addWidget(self.next_btn)
         
         self.prev_btn.clicked.connect(self.prev_question)
         # self.layout.addWidget(self.prev_btn)
+        self.clear_btn.clicked.connect(self.clear)
        
         # self.label.setFont(QtGui.QFont("Nunito", 14, QtGui.QFont.bold))
         self.is_fetching = False
@@ -169,6 +175,7 @@ class QuizApp(py.QWidget):
         
         if not self.is_in_layout(self.layout, self.button_layout):
             self.button_layout.addWidget(self.prev_btn)
+            self.button_layout.addWidget(self.clear_btn)
             self.button_layout.addWidget(self.next_btn)
             self.layout.addLayout(self.button_layout)
         
@@ -207,6 +214,23 @@ class QuizApp(py.QWidget):
             #     # print("added")
             #     self.index += 1
     
+    def clear(self):
+        try:
+            self.correct_count = 0
+            self.wrong_count = 0
+            self.fetch_question(6)
+            if self.load_question() == self.correct_count: print("yes")
+            else:
+                self.correct_count = 0
+                self.wrong_count = 0
+                self.correct_count_text.setText(f"You have answered {self.correct_count} correctly")
+                self.wrong_count_text.setText(f"You have answered {self.wrong_count} wrongly")
+            for btn in self.option_buttons:
+                self.layout.removeWidget(btn)
+            self.option_buttons = []
+            self.load_question()
+        except IndexError as e:
+            print(f"clear error {e}")
     def go_back(self):
         if self.index == 0:
             return
